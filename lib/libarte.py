@@ -26,9 +26,11 @@ def libArteListVideos():
 	return libArteJsonParser.getVideos(params['url'])
 
 def libArteListDate():
-	return libMediathek.populateDirDate('libArteListDateVideos')
+	return libMediathek.populateDirDate('libArteListDateVideos', dateChooser=True)
 		
 def libArteListDateVideos():
+	if 'yyyymmdd' not in params:
+		params['yyyymmdd'] = libMediathek.dialogDate('%Y-%m-%d')
 	return libArteJsonParser.getDate(params['yyyymmdd'])
 	
 def libArteSearch():
