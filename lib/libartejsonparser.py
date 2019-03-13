@@ -121,9 +121,18 @@ def getSearch(s):
 		d['_tvshowtitle'] = video['title']
 		if video['imageUrl'] != None:
 			d['_thumb'] = video['imageUrl']
-		d['url'] = 'https://api.arte.tv/api/player/v1/config/de/'+video['programId']+'?autostart=0&lifeCycle=1&lang=de_DE&config=arte_tvguide'
-		d['mode'] = 'libArtePlay'
-		d['_type'] = 'date'
+		d['_plot'] = video['shortDescription']
+		if video['kind'] == 'SHOW':
+			d['_duration'] = str(float(video['duration']) * 60)
+			d['url'] = 'https://api.arte.tv/api/player/v1/config/de/' + video[
+				'programId'] + '?autostart=0&lifeCycle=1&lang=de_DE&config=arte_tvguide'
+			d['mode'] = 'libArtePlay'
+			d['_type'] = 'date'
+		else:
+			d['url'] = 'http://www.arte.tv/hbbtvv2/services/web/index.php/OPA/v3/videos/collection/PLAYLIST/' + video[
+				'programId'] + '/de'
+			d['mode'] = 'libArteListVideos'
+			d['_type'] = 'dir'
 		l.append(d)
 	return l
 preferences = {
@@ -183,6 +192,7 @@ lang = {
 		'VOA-STE':'omu',
 		'VOF-STA':'omu',
 		'VOF-STE':'omu',
+		'VO-STA': 'omu',
 		'VAAUD':'de',
 		'VFAUD':'fr',
 		'VE[ANG]':'en',
