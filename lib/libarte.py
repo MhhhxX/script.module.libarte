@@ -13,6 +13,7 @@ def libArteListMain():
 	l.append({'_name':translation(31032), 'mode':'libArteListShows',  	'_type':'dir'})
 	l.append({'_name':translation(31033), 'mode':'libArteListDate',		'_type':'dir'})
 	l.append({'_name':translation(31035), 'mode':'libArteThemes',		'_type':'dir'})
+	l.append({'_name':translation(31039), 'mode':'libArteSearch', 		'_type':'dir'})
 	return l
 	
 def libArteListShows():
@@ -29,6 +30,15 @@ def libArteListDate():
 		
 def libArteListDateVideos():
 	return libArteJsonParser.getDate(params['yyyymmdd'])
+	
+def libArteSearch():
+	search_string = libMediathek.getSearchString()
+	return libArteJsonParser.getSearch(search_string)
+
+def libArteListSearch(searchString=False):
+	if not searchString:
+		searchString = params['searchString']
+	return search(searchString)
 		
 def libArtePlay():
 	#return libArteJsonParser.getVideoUrl(params['url'])
@@ -54,6 +64,8 @@ def list():
 	'libArteListVideos': libArteListVideos,
 	'libArteListDate': libArteListDate,
 	'libArteListDateVideos': libArteListDateVideos,
+	'libArteSearch': libArteSearch,
+	'libArteListSearch': libArteListSearch,
 	'libArtePlay': libArtePlay,
 	}
 	

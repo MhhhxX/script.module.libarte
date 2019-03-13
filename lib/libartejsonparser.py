@@ -2,6 +2,7 @@
 import json
 import libmediathek3 as libMediathek
 import re
+import urllib
 from operator import itemgetter
 #import xml.etree.ElementTree as ET
 
@@ -107,7 +108,24 @@ def getDate(yyyymmdd):
 			d['_type'] = 'date'
 			l.append(d)
 	return l
-	
+
+def getSearch(s):
+	l = []
+	url = 'http://www.arte.tv/hbbtvv2/services/web/index.php/OPA/v3/videos/search/text/'+urllib.quote_plus(s)+'/de'
+	response = libMediathek.getUrl(url)
+	j = json.loads(response)
+	for video in j['teasers']:
+		d = {}
+		d['_name'] = video['title']
+		
+		d['_tvshowtitle'] = video['title']
+		if video['imageUrl'] != None:
+			d['_thumb'] = video['imageUrl']
+		d['url'] = 'https://api.arte.tv/api/player/v1/config/de/'+video['programId']+'?autostart=0&lifeCycle=1&lang=de_DE&config=arte_tvguide'
+		d['mode'] = 'libArtePlay'
+		d['_type'] = 'date'
+		l.append(d)
+	return l
 preferences = {
 				'ignore':0,
 				'FR':1,
@@ -221,4 +239,13 @@ def getVideoUrlWeb(url):
 			storedLang = preferences.get(l,0)
 			result = {'url':j['videoJsonPlayer']['VSR'][key]['url'], 'type': 'video', 'stream':'HLS'}
 	d['media'].append(result)
+	
+	d['metadata'] = {}
+	d['metadata']['name'] = j['videoJsonPlayer']['VTI']
+	if 'VDE' in j['videoJsonPlayer']:
+		d['metadata']['plot'] = j['videoJsonPlayer']['VDE']
+	elif 'V7T' in j['videoJsonPlayer']:
+		d['metadata']['plot'] = j['videoJsonPlayer']['V7T']
+	d['metadata']['thumb'] = j['videoJsonPlayer']['VTU']['IUR']
+	d['metadata']['duration'] = str(j['videoJsonPlayer']['videoDurationSeconds'])
 	return d
