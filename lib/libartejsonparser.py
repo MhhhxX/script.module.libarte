@@ -122,7 +122,7 @@ def getSearch(s):
 		if video['imageUrl'] != None:
 			d['_thumb'] = video['imageUrl']
 		d['_plot'] = video['shortDescription']
-		if video['kind'] == 'SHOW':
+		if video['kind'] == 'SHOW' or video['kind'] == 'BONUS':
 			d['_duration'] = str(float(video['duration']) * 60)
 			d['url'] = 'https://api.arte.tv/api/player/v1/config/de/' + video[
 				'programId'] + '?autostart=0&lifeCycle=1&lang=de_DE&config=arte_tvguide'
