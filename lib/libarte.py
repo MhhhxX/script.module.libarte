@@ -13,6 +13,9 @@ def libArteListMain():
 	l.append({'_name':translation(31032), 'mode':'libArteListShows',  	'_type':'dir'})
 	l.append({'_name':translation(31033), 'mode':'libArteListDate',		'_type':'dir'})
 	l.append({'_name':translation(31035), 'mode':'libArteThemes',		'_type':'dir'})
+	l.append({'_name': translation(31034), 'mode': 'libArteCategories', '_type': 'dir'})
+	l.append({'_name': translation(31043), 'mode': 'libArteListListings', '_type': 'dir', 'url': 'https://api.arte.tv/api/emac/v3/de/app/zones/listing_LAST_CHANCE?limit=20'})
+	l.append({'_name': translation(31044), 'mode': 'libArteListListings', '_type': 'dir', 'url': 'https://api.arte.tv/api/emac/v3/de/app/zones/listing_MOST_RECENT?limit=20'})
 	l.append({'_name':translation(31039), 'mode':'libArteSearch', 		'_type':'dir'})
 	return l
 	
@@ -21,9 +24,24 @@ def libArteListShows():
 	
 def libArteThemes():
 	return libArteJsonParser.getPlaylists()
+
+
+def libArteCategories():
+	return libArteJsonParser.getCategories()
+
+
+def libArteSubcategories():
+	return libArteJsonParser.getSubcategories(params['subcategories'])
+
 	
 def libArteListVideos():
 	return libArteJsonParser.getVideos(params['url'])
+
+def libArteListListings():
+	return libArteJsonParser.getListings(params['url'])
+
+def libArteListVideosNew():
+	return libArteJsonParser.getVideosNeu(params['url'])
 
 def libArteListDate():
 	return libMediathek.populateDirDate('libArteListDateVideos', dateChooser=True)
@@ -45,6 +63,9 @@ def libArteListSearch(searchString=False):
 def libArtePlay():
 	#return libArteJsonParser.getVideoUrl(params['url'])
 	return libArteJsonParser.getVideoUrlWeb(params['url'])
+
+def libArtePlayNew():
+	return libArteJsonParser.getVideoUrlNew(params['url'])
 	
 def headUrl(url):#TODO: move to libmediathek3
 	libMediathek.log(url)
@@ -63,12 +84,17 @@ def list():
 	'libArteListMain': libArteListMain,
 	'libArteListShows': libArteListShows,
 	'libArteThemes': libArteThemes,
+	'libArteCategories': libArteCategories,
+	'libArteSubcategories': libArteSubcategories,
 	'libArteListVideos': libArteListVideos,
+	'libArteListListings': libArteListListings,
+	'libArteListVideosNew': libArteListVideosNew,
 	'libArteListDate': libArteListDate,
 	'libArteListDateVideos': libArteListDateVideos,
 	'libArteSearch': libArteSearch,
 	'libArteListSearch': libArteListSearch,
 	'libArtePlay': libArtePlay,
+	'libArtePlayNew': libArtePlayNew
 	}
 	
 	global params
@@ -78,6 +104,8 @@ def list():
 	mode = params.get('mode','libArteListMain')
 	if mode == 'libArtePlay':
 		libMediathek.play(libArtePlay())
+	elif mode == 'libArtePlayNew':
+		libMediathek.play(libArtePlayNew())
 	else:
 		l = modes.get(mode)()
 		libMediathek.addEntries(l)
