@@ -248,7 +248,7 @@ def getVideosNeu(url):
 		l.append(d)
 	return l
 
-langs = {
+lang_codes = {
 	'de': ['VA', 'VOA'],
 	'deSub': ['VOA-STA', 'VA-STA'],
 	'deDesc': 'VAAUD',
@@ -271,12 +271,12 @@ def getVideoUrlNew(url, audio_desc=''):
 		audio_code = stream['audioCode']
 		quality = stream['quality']
 		xbmc.log(audio_desc, xbmc.LOGNOTICE)
-		if bool(audio_desc) and audio_code == langs[language + 'Desc']:
+		if bool(audio_desc) and audio_code == lang_codes[language + 'Desc']:
 			result['url'] = stream['url']
-		if audio_code in langs[language] and not quality == 'SQ' and not 'url' in result:
+		if audio_code in lang_codes[language] and not quality == 'SQ' and not 'url' in result:
 			result['url'] = stream['url']
 			d['metadata']['duration'] = stream['durationSeconds']
-		if audio_code in langs[language + 'Sub'] and not quality == 'SQ':
+		if audio_code in lang_codes[language + 'Sub'] and not quality == 'SQ':
 			fallback_sub['url'] = stream['url']
 		if not 'url' in fallback_sub and 'STA' in audio_code and not quality == 'SQ':
 			fallback_sub['url'] = stream['url']
