@@ -171,7 +171,7 @@ def getSubcategories(sublist):
 	return l
 
 
-def getListings(url):
+def getListings(url, audio_desc='False'):
 	l = []
 	response = libMediathek.getUrl(url, headers=emac_token)
 	j = json.loads(response)
@@ -189,12 +189,15 @@ def getListings(url):
 		d['_duration'] = video['duration']
 		d['url'] = 'https://api.arte.tv/api/opa/v3/videoStreams?programId=' + video['programId'] + '&mediaType=hls&language=de'
 		d['mode'] = 'libArtePlayNew'
+		d['audioDesc'] = audio_desc
 		l.append(d)
 	if j['nextPage']:
 		d = {}
 		d['url'] = j['nextPage']
 		d['_type'] = 'nextPage'
 		d['mode'] = 'libArteListListings'
+		if bool(audio_desc):
+			d['audioDesc'] = 'True'
 		l.append(d)
 	return l
 
@@ -235,7 +238,7 @@ def getVideosNeu(url):
 	return l
 
 
-def getVideoUrlNew(url):
+def getVideoUrlNew(url, audio_desc='False'):
 	response = libMediathek.getUrl(url, headers=opa_token)
 	j = json.loads(response)
 	d = {'media': [], 'metadata': {}}
@@ -247,9 +250,9 @@ def getVideoUrlNew(url):
 	for stream in streams:
 		audio_code = stream['audioCode']
 		quality = stream['quality']
-		if stream['audioCode'] == 'VAAUD':
-			continue
-		if 'VA' == audio_code or audio_code == 'VOA' and not quality == 'SQ':
+		if stream['audioCode'] == 'VAAUD' and bool(audio_desc):
+			result = {'url': stream['url'], 'type': 'video', 'stream': 'HLS'}
+		if 'VA' == audio_code or audio_code == 'VOA' and not quality == 'SQ' and not result:
 			result = {'url': stream['url'], 'type': 'video', 'stream': 'HLS'}
 			d['metadata']['duration'] = stream['durationSeconds']
 		if 'STA' in audio_code and not quality == 'SQ':
