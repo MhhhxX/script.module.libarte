@@ -73,6 +73,8 @@ def libArtePlay():
 	return libArteJsonParser.getVideoUrlWeb(params['url'])
 
 def libArtePlayNew():
+	if 'audioDesc' not in params:
+		params['audioDesc'] = ''
 	return libArteJsonParser.getVideoUrlNew(params['url'], audio_desc=params['audioDesc'])
 	
 def headUrl(url):#TODO: move to libmediathek3

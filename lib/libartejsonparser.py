@@ -1,25 +1,20 @@
 # -*- coding: utf-8 -*-
 import json
 import libmediathek3 as libMediathek
-import re
 import urllib
 import xbmc
-import datetime
-import time
-from operator import itemgetter
-#import xml.etree.ElementTree as ET
 
 langs = ['de', 'fr']
 
 setting = libMediathek.getSetting
 language = langs[int(setting("lang"))]
 
-xbmc.log(language, xbmc.LOGNOTICE)
-
 opa_token = {"Authorization": "Bearer Nzc1Yjc1ZjJkYjk1NWFhN2I2MWEwMmRlMzAzNjI5NmU3NWU3ODg4ODJjOWMxNTMxYzEzZGRjYjg2ZGE4MmIwOA"}
 emac_token = {"Authorization": "Bearer MWZmZjk5NjE1ODgxM2E0MTI2NzY4MzQ5MTZkOWVkYTA1M2U4YjM3NDM2MjEwMDllODRhMjIzZjQwNjBiNGYxYw"}
 
 opa_url = 'https://api.arte.tv/api/opa/v3/'
+emac_url = 'https://api.arte.tv/api/emac/v3/' + language + '/web'
+stream_params = '&quality=$in:XQ,HQ&mediaType=hls&language=' + language + '&channel=' + language.upper()
 	
 def getVideos(url):
 	l = []
@@ -161,6 +156,7 @@ def getCategories():
 		d['_plot'] = category['description']
 		d['mode'] = 'libArteSubcategories'
 		d['_type'] = 'dir'
+		d['parentCategory'] = category['code']
 		d['subcategories'] = json.dumps(category['subcategories'])
 		l.append(d)
 	return l
@@ -186,18 +182,28 @@ def getListings(url, audio_desc=''):
 	j = json.loads(response)
 	for video in j['data']:
 		d = {}
-		d['_name'] = video['title']
+		if video['subtitle'] != None and video['title'] != None:
+			d['_name'] = video['title'] + ' | ' + video['subtitle']
+		elif video['subtitle'] != None:
+			d['_name'] = video['subtitle']
+		else:
+			d['_name'] = video['title']
 		d['_plot'] = video['description']
-		d['_type'] = 'date'
 		if video['images']['landscape']:
 			max_res = max(video['images']['landscape']['resolutions'], key=lambda item: item['w'])
 			d['_thumb'] = max_res['url']
 		elif video['images']['portrait']:
 			max_res = max(video['images']['portrait']['resolutions'], key=lambda item: item['h'])
 			d['_thumb'] = max_res['url']
-		d['_duration'] = video['duration']
-		d['url'] = opa_url + '/videoStreams?programId=' + video['programId'] + '&mediaType=hls&language=' + language
-		d['mode'] = 'libArtePlayNew'
+		if video['kind']['isCollection']:
+			d['mode'] = 'libArteListCollection'
+			d['url'] = emac_url + '/' + video['programId']
+			d['_type'] = 'dir'
+		else:
+			d['url'] = opa_url + '/videoStreams?programId=' + video['programId'] + stream_params + '&kind=$in:SHOW,BONUS'
+			d['mode'] = 'libArtePlayNew'
+			d['_type'] = 'date'
+			d['_duration'] = video['duration']
 		d['audioDesc'] = audio_desc
 		l.append(d)
 	if j['nextPage']:
@@ -218,7 +224,7 @@ def getVideosNeu(url):
 	for video in j['videos']:
 		d = {}
 		if video['subtitle'] != None and video['title'] != None:
-			d['_name'] = video['subtitle'] + ' | ' + video['title']
+			d['_name'] = video['title'] + ' | ' + video['subtitle']
 		elif video['subtitle'] != None:
 			d['_name'] = video['subtitle']
 		else:
@@ -236,7 +242,7 @@ def getVideosNeu(url):
 			d['_plot'] = video['fullDescription']
 		elif video['shortDescription'] != None:
 			d['_plot'] = video['shortDescription']
-		d['url'] = video['links']['videoStreams']['href'] + '&mediaType=hls&language=' + language
+		d['url'] = video['links']['videoStreams']['href'] + stream_params
 		d['mode'] = 'libArtePlayNew'
 		d['_type'] = 'date'
 		l.append(d)
@@ -265,23 +271,25 @@ def getVideoUrlNew(url, audio_desc=''):
 	result = {'type': 'video', 'stream': 'HLS'}
 	fallback_sub = {'type': 'video', 'stream': 'HLS'}
 	fallback = {'type': 'video', 'stream': 'HLS'}
-	streams = sorted(j['videoStreams'], key=lambda item: item['durationSeconds'])
-	xbmc.log(json.dumps(streams), xbmc.LOGDEBUG)
-	for stream in streams:
+	xbmc.log(json.dumps(j['videoStreams']), xbmc.LOGDEBUG)
+	for stream in j['videoStreams']:
 		audio_code = stream['audioCode']
-		quality = stream['quality']
 		xbmc.log(audio_desc, xbmc.LOGNOTICE)
 		if bool(audio_desc) and audio_code == lang_codes[language + 'Desc']:
 			result['url'] = stream['url']
-		if audio_code in lang_codes[language] and not quality == 'SQ' and not 'url' in result:
+			d['metadata']['duration'] = stream['durationSeconds']
+		if audio_code in lang_codes[language] and 'url' not in result:
 			result['url'] = stream['url']
 			d['metadata']['duration'] = stream['durationSeconds']
-		if audio_code in lang_codes[language + 'Sub'] and not quality == 'SQ':
+		if audio_code in lang_codes[language + 'Sub']:
 			fallback_sub['url'] = stream['url']
-		if not 'url' in fallback_sub and 'STA' in audio_code and not quality == 'SQ':
+			d['metadata']['duration'] = stream['durationSeconds']
+		if 'url' not in fallback_sub and 'STA' in audio_code:
 			fallback_sub['url'] = stream['url']
+			d['metadata']['duration'] = stream['durationSeconds']
 		if 'VO' in audio_code:
 			fallback['url'] = stream['url']
+			d['metadata']['duration'] = stream['durationSeconds']
 
 	xbmc.log(json.dumps(result), xbmc.LOGNOTICE)
 	if 'url' in result:
