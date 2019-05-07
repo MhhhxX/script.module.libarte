@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
 import libmediathek3 as libMediathek
-import urllib
-import xbmc
 
 langs = ['de', 'fr']
 
@@ -14,136 +12,20 @@ emac_token = {"Authorization": "Bearer MWZmZjk5NjE1ODgxM2E0MTI2NzY4MzQ5MTZkOWVkY
 
 opa_url = 'https://api.arte.tv/api/opa/v3/'
 emac_url = 'https://api.arte.tv/api/emac/v3/' + language + '/web'
-stream_params = '&quality=$in:XQ,HQ&mediaType=hls&language=' + language + '&channel=' + language.upper()
-	
-def getVideos(url):
-	l = []
-	response = libMediathek.getUrl(url)
-	j = json.loads(response)
-	for video in j['videos']:
-		d = {}
-		#d['_name'] = video['title']
-		if video['subtitle'] != None:
-			d['_name'] = video['subtitle']
-		else:
-			d['_name'] = video['title']
-		
-		d['_tvshowtitle'] = video['title']
-		if video['imageUrl'] != None:
-			d['_thumb'] = video['imageUrl']
-		if video['durationSeconds'] != None:
-			d['_duration'] = str(video['durationSeconds'])
-		if video['teaserText'] != None:
-			d['_plotoutline'] = video['teaserText']
-			d['_plot'] = video['teaserText']
-		if video['fullDescription'] != None:
-			d['_plot'] = video['fullDescription']
-		elif video['shortDescription'] != None:
-			d['_plot'] = video['shortDescription']
-		#d['url'] = 'http://www.arte.tv/hbbtvv2/services/web/index.php/OPA/streams/'+video['programId']+'/'+video['kind']+'/'+video['platform']+'/de/DE'
-		d['url'] = 'https://api.arte.tv/api/player/v1/config/de/'+video['programId']+'?autostart=0&lifeCycle=1&lang=de_DE&config=arte_tvguide'
-		d['mode'] = 'libArtePlay'
-		d['_type'] = 'date'
-		l.append(d)
-	if j['meta']['page'] < j['meta']['pages']:
-		d = {}
-		d['url'] = url.split('&page=')[0] + '&page=' + str(j['meta']['page'] + 1)
-		d['_type'] = 'nextPage'
-		d['mode'] = 'libArteListVideos'
-		l.append(d)
-	return l
-
-def getAZ():
-	l = []
-	response = libMediathek.getUrl('http://www.arte.tv/hbbtvv2/services/web/index.php/EMAC/teasers/home/de')
-	j = json.loads(response)
-	for mag in j['teasers']['magazines']:
-		d = {}
-		d['_name'] = mag['label']['de']
-		d['url'] = 'http://www.arte.tv/hbbtvv2/services/web/index.php/' + mag['url'] + '/de'
-		d['_type'] = 'dir'
-		d['mode'] = 'libArteListVideos'
-		l.append(d)
-	return l
-	
-def getPlaylists():#,playlists, highlights
-	l = []
-	response = libMediathek.getUrl('http://www.arte.tv/hbbtvv2/services/web/index.php/EMAC/teasers/home/de')
-	j = json.loads(response)
-	for playlist in j['teasers']['playlists']:
-		d = {}
-		d['_name'] = playlist['title']
-		d['_subtitle'] = playlist['subtitle']
-		d['_thumb'] = playlist['imageUrl']
-		d['_plot'] = playlist['teaserText']
-		d['url'] = 'http://www.arte.tv/hbbtvv2/services/web/index.php/OPA/v3/videos/collection/PLAYLIST/' + playlist['programId'] + '/de'
-		d['_type'] = 'dir'
-		d['mode'] = 'libArteListVideos'
-		l.append(d)
-	return l
-		
+stream_params = '&quality=$in:XQ,HQ,SQ&mediaType=hls&language=' + language + '&channel=' + language.upper()
 	
 	
 def getDate(yyyymmdd):
-	l = []
-	response = libMediathek.getUrl('http://www.arte.tv/hbbtvv2/services/web/index.php/OPA/programs/'+yyyymmdd+'/de')
+	# this would be the better endpoint, but it's not working: /zones/listing_TV_GUIDE?day=
+	response = libMediathek.getUrl(emac_url + '/TV_GUIDE?day=' + yyyymmdd, emac_token)
 	j = json.loads(response)
-	for program in j['programs']:
-		if program['video'] != None:
-			d = {}
-			#d['_airedtime'] = program['broadcast']['broadcastBeginRounded'].split(' ')[-2][:5]
-			s = program['broadcast']['broadcastBeginRounded'].split(' ')[-2].split(':')
-			d['_airedtime'] = str(int(s[0]) + 1) + ':' + s[1]
-			if len(d['_airedtime']) == 4:
-				d['_airedtime'] = '0' + d['_airedtime']
-			d['_name'] = program['program']['title']
-			#d['url'] = 'http://www.arte.tv/papi/tvguide/videos/stream/player/D/'+program['video']['emNumber']+'_PLUS7-D/ALL/ALL.json'
-			#d['url'] = 'http://www.arte.tv/hbbtvv2/services/web/index.php/OPA/streams/'+program['video']['programId']+'/SHOW/ARTEPLUS7/de/DE'
-			#d['url'] = 'http://www.arte.tv/hbbtvv2/services/web/index.php/OPA/streams/'+program['video']['programId']+'/'+program['video']['kind']+'/'+program['video']['platform']+'/de/DE'
-			
-			d['url'] = 'https://api.arte.tv/api/player/v1/config/de/'+program['video']['programId']+'?autostart=0&lifeCycle=1&lang=de_DE&config=arte_tvguide'
-			#d['programId'] = program['video']['programId']
-			
-			if program['video']['imageUrl'] != None:
-				d['_thumb'] = program['video']['imageUrl']
-			if program['video']['durationSeconds'] != None:
-				d['_duration'] = str(program['video']['durationSeconds'])
-			if program['video']['teaserText'] != None:
-				d['_plotoutline'] = program['video']['teaserText']
-				d['_plot'] = program['video']['teaserText']
-			if program['video']['fullDescription'] != None:
-				d['_plot'] = program['video']['fullDescription']
-			d['mode'] = 'libArtePlay'
-			d['_type'] = 'date'
-			l.append(d)
-	return l
+	return _parse_data(j['zones'][1]['data'], None, audio_desc='')
+
 
 def getSearch(s):
 	l = []
-	url = 'http://www.arte.tv/hbbtvv2/services/web/index.php/OPA/v3/videos/search/text/'+urllib.quote_plus(s)+'/de'
-	response = libMediathek.getUrl(url)
-	j = json.loads(response)
-	for video in j['teasers']:
-		d = {}
-		d['_name'] = video['title']
-		
-		d['_tvshowtitle'] = video['title']
-		if video['imageUrl'] != None:
-			d['_thumb'] = video['imageUrl']
-		d['_plot'] = video['shortDescription']
-		if video['kind'] == 'SHOW' or video['kind'] == 'BONUS':
-			d['_duration'] = str(float(video['duration']) * 60)
-			d['url'] = 'https://api.arte.tv/api/player/v1/config/de/' + video[
-				'programId'] + '?autostart=0&lifeCycle=1&lang=de_DE&config=arte_tvguide'
-			d['mode'] = 'libArtePlay'
-			d['_type'] = 'date'
-		else:
-			d['url'] = 'http://www.arte.tv/hbbtvv2/services/web/index.php/OPA/v3/videos/collection/PLAYLIST/' + video[
-				'programId'] + '/de'
-			d['mode'] = 'libArteListVideos'
-			d['_type'] = 'dir'
-		l.append(d)
-	return l
+	url = emac_url + '/zones/listing_SEARCH?limit=20&query=' + s
+	return getListings(url)
 
 
 def getCategories():
@@ -169,9 +51,42 @@ def getSubcategories(sublist):
 		d = {}
 		d['_name'] = subcategory['label']
 		d['_plot'] = subcategory['description']
-		d['url'] = opa_url + '/videos?sort=broadcastBegin&language=' + language + '&subcategory.code=' + subcategory['code']
+		d['url'] = opa_url + '/videos?language=' + language + '&subcategory.code=' + subcategory['code']
 		d['_type'] = 'dir'
 		d['mode'] = 'libArteListVideosNew'
+		l.append(d)
+	return l
+
+
+def getCollection(url):
+	response = libMediathek.getUrl(url, opa_token)
+	j = json.loads(response)
+	program_id = j['programs'][0]['programId']
+
+	topic_children = filter(lambda item: item['kind'] == 'TOPIC', j['programs'][0]['children'])
+	if topic_children:
+		l = [{'_name': 'Übersicht', '_type': 'dir', 'mode': 'libArteListListings', 'url': emac_url + '/zones/collection_videos?id=' + program_id}]
+	else:
+		return getListings(emac_url + '/zones/collection_videos?id=' + program_id)
+	for child in topic_children:
+		subresponse = libMediathek.getUrl(opa_url + '/programs?programId=' + child['programId'] + '&language=' + language + '&fields=title,subtitle,fullDescription,shortDescription,mainImage.url', headers=opa_token)
+		child_json = json.loads(subresponse)
+		program = child_json['programs'][0]
+		d = {}
+		if program['subtitle'] != None and program['title'] != None:
+			d['_name'] = program['title'] + ' | ' + program['subtitle']
+		elif program['subtitle'] != None:
+			d['_name'] = program['subtitle']
+		else:
+			d['_name'] = program['title']
+		if program['fullDescription']:
+			d['_plot'] = program['fullDescription']
+		elif program['shortDescription']:
+			d['_plot'] = program['shortDescription']
+		d['_thumb'] = program['mainImage']['url']
+		d['_type'] = 'dir'
+		d['mode'] = 'libArteListListings'
+		d['url'] = emac_url + '/zones/collection_subcollection?id=' + program_id + '_' + child['programId']
 		l.append(d)
 	return l
 
@@ -180,15 +95,27 @@ def getListings(url, audio_desc=''):
 	l = []
 	response = libMediathek.getUrl(url, headers=emac_token)
 	j = json.loads(response)
-	for video in j['data']:
+	return _parse_data(j['data'], j['nextPage'], audio_desc=audio_desc)
+
+
+def _parse_data(data, nextpage, audio_desc=''):
+	l = []
+	for video in filter(lambda item: item['programId'] is not None, data):
 		d = {}
-		if video['subtitle'] != None and video['title'] != None:
+		if video['subtitle'] is not None and video['title'] is not None:
 			d['_name'] = video['title'] + ' | ' + video['subtitle']
-		elif video['subtitle'] != None:
+		elif video['subtitle'] is not None:
 			d['_name'] = video['subtitle']
 		else:
 			d['_name'] = video['title']
-		d['_plot'] = video['description']
+		if 'fullDescription' in video and video['fullDescription']:
+			d['_plot'] = video['fullDescription']
+		elif 'description' in video and video['description']:
+			d['_plot'] = video['description']
+		elif video['shortDescription']:
+			d['_plot'] = video['shortDescription']
+		if 'broadcastDates' in video:
+			d['_airedtime'] = video['broadcastDates'][0][11:-4]
 		if video['images']['landscape']:
 			max_res = max(video['images']['landscape']['resolutions'], key=lambda item: item['w'])
 			d['_thumb'] = max_res['url']
@@ -196,19 +123,19 @@ def getListings(url, audio_desc=''):
 			max_res = max(video['images']['portrait']['resolutions'], key=lambda item: item['h'])
 			d['_thumb'] = max_res['url']
 		if video['kind']['isCollection']:
-			d['mode'] = 'libArteListCollection'
-			d['url'] = emac_url + '/' + video['programId']
+			d['mode'] = 'libArteListCollections'
+			d['url'] = opa_url + '/programs?programId=' + video['programId'] + '&language=' + language + '&fields=children,programId'
 			d['_type'] = 'dir'
 		else:
-			d['url'] = opa_url + '/videoStreams?programId=' + video['programId'] + stream_params + '&kind=$in:SHOW,BONUS'
-			d['mode'] = 'libArtePlayNew'
+			d['url'] = opa_url + '/videoStreams?programId=' + video['programId'] + stream_params + '&kind=' + video['kind']['code']
+			d['mode'] = 'libArtePlay'
 			d['_type'] = 'date'
 			d['_duration'] = video['duration']
 		d['audioDesc'] = audio_desc
 		l.append(d)
-	if j['nextPage']:
+	if nextpage:
 		d = {}
-		d['url'] = j['nextPage']
+		d['url'] = nextpage
 		d['_type'] = 'nextPage'
 		d['mode'] = 'libArteListListings'
 		if bool(audio_desc):
@@ -217,7 +144,7 @@ def getListings(url, audio_desc=''):
 	return l
 
 
-def getVideosNeu(url):
+def getVideos(url):
 	l = []
 	response = libMediathek.getUrl(url, headers=opa_token)
 	j = json.loads(response)
@@ -243,7 +170,7 @@ def getVideosNeu(url):
 		elif video['shortDescription'] != None:
 			d['_plot'] = video['shortDescription']
 		d['url'] = video['links']['videoStreams']['href'] + stream_params
-		d['mode'] = 'libArtePlayNew'
+		d['mode'] = 'libArtePlay'
 		d['_type'] = 'date'
 		l.append(d)
 	if j['meta']['videos']['page'] < j['meta']['videos']['pages']:
@@ -264,17 +191,15 @@ lang_codes = {
 }
 
 
-def getVideoUrlNew(url, audio_desc=''):
+def getVideoStream(url, audio_desc=''):
 	response = libMediathek.getUrl(url, headers=opa_token)
 	j = json.loads(response)
 	d = {'media': [], 'metadata': {}}
 	result = {'type': 'video', 'stream': 'HLS'}
 	fallback_sub = {'type': 'video', 'stream': 'HLS'}
 	fallback = {'type': 'video', 'stream': 'HLS'}
-	xbmc.log(json.dumps(j['videoStreams']), xbmc.LOGDEBUG)
 	for stream in j['videoStreams']:
 		audio_code = stream['audioCode']
-		xbmc.log(audio_desc, xbmc.LOGNOTICE)
 		if bool(audio_desc) and audio_code == lang_codes[language + 'Desc']:
 			result['url'] = stream['url']
 			d['metadata']['duration'] = stream['durationSeconds']
@@ -290,8 +215,6 @@ def getVideoUrlNew(url, audio_desc=''):
 		if 'VO' in audio_code:
 			fallback['url'] = stream['url']
 			d['metadata']['duration'] = stream['durationSeconds']
-
-	xbmc.log(json.dumps(result), xbmc.LOGNOTICE)
 	if 'url' in result:
 		d['media'].append(result)
 	elif not 'url' in result and 'url' in fallback_sub:
@@ -373,55 +296,3 @@ lang = {
 		'STE[ESP]':'es',
 		'STE[POL]':'pl',
 }
-def getVideoUrl(url):
-	d = {}
-	d['media'] = []
-	response = libMediathek.getUrl(url)
-	j = json.loads(response)
-	storedLang = 0
-	for stream in j['videoStreams']:
-		properties = {}
-		properties['url'] = stream['url']
-		properties['bitrate'] = bitrates[stream['quality']]
-		
-		s = stream['audioCode'].split('-')
-		properties['lang'] = lang[s[0]]
-		if s[0] == 'VAAUD' or s[0] == 'VFAUD':
-			properties['audiodesc'] = True
-		if len(s) > 1:
-			properties['subtitlelang'] = lang[s[1]]
-			if s[1] == 'STMA' or s[1] == 'STMF':
-				properties['sutitlemute'] = True
-		
-		properties['type'] = 'video'
-		properties['stream'] = 'MP4'
-		d['media'].append(properties)
-	return d
-	
-def getVideoUrlWeb(url):
-	d = {}
-	d['media'] = []
-	response = libMediathek.getUrl(url)
-	j = json.loads(response)
-	#for caption in j.get('captions',[]):
-	#	if caption['format'] == 'ebu-tt-d-basic-de':
-	#		d['subtitle'] = [{'url':caption['uri'], 'type':'ttml', 'lang':'de', 'colour':True}]
-	#	#elif caption['format'] == 'webvtt':
-	#	#	d['subtitle'] = [{'url':caption['uri'], 'type':'webvtt', 'lang':'de', 'colour':False}]
-	storedLang = 0
-	for key in j['videoJsonPlayer']['VSR']:#oh, this is such bullshit. there are endless and senseless permutations of language/subtitle permutations. i'll have to rewrite this in the future for french and other languages, subtitles, hearing disabled, ... who the hell uses baked in subtitles in 2017?!?!
-		l = lang.get(j['videoJsonPlayer']['VSR'][key]['versionCode'].split('[')[0],'ignore').upper()
-		if preferences.get(l,0) > storedLang and j['videoJsonPlayer']['VSR'][key]['mediaType'] == 'hls':
-			storedLang = preferences.get(l,0)
-			result = {'url':j['videoJsonPlayer']['VSR'][key]['url'], 'type': 'video', 'stream':'HLS'}
-	d['media'].append(result)
-	
-	d['metadata'] = {}
-	d['metadata']['name'] = j['videoJsonPlayer']['VTI']
-	if 'VDE' in j['videoJsonPlayer']:
-		d['metadata']['plot'] = j['videoJsonPlayer']['VDE']
-	elif 'V7T' in j['videoJsonPlayer']:
-		d['metadata']['plot'] = j['videoJsonPlayer']['V7T']
-	d['metadata']['thumb'] = j['videoJsonPlayer']['VTU']['IUR']
-	d['metadata']['duration'] = str(j['videoJsonPlayer']['videoDurationSeconds'])
-	return d
