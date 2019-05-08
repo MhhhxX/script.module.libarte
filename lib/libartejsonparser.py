@@ -19,11 +19,10 @@ def getDate(yyyymmdd):
 	# this would be the better endpoint, but it's not working: /zones/listing_TV_GUIDE?day=
 	response = libMediathek.getUrl(emac_url + '/TV_GUIDE?day=' + yyyymmdd, emac_token)
 	j = json.loads(response)
-	return _parse_data(j['zones'][1]['data'], None, audio_desc='')
+	return _parse_data(j['zones'][1]['data'], audio_desc='')
 
 
 def getSearch(s):
-	l = []
 	url = emac_url + '/zones/listing_SEARCH?limit=20&query=' + s
 	return getListings(url)
 
@@ -62,20 +61,18 @@ def getCollection(url):
 	response = libMediathek.getUrl(url, opa_token)
 	j = json.loads(response)
 	program_id = j['programs'][0]['programId']
-
 	topic_children = filter(lambda item: item['kind'] == 'TOPIC', j['programs'][0]['children'])
-	if topic_children:
-		l = [{'_name': 'Übersicht', '_type': 'dir', 'mode': 'libArteListListings', 'url': emac_url + '/zones/collection_videos?id=' + program_id}]
-	else:
+	if not topic_children:
 		return getListings(emac_url + '/zones/collection_videos?id=' + program_id)
+	l = [{'_name': 'Übersicht', '_type': 'dir', 'mode': 'libArteListListings', 'url': emac_url + '/zones/collection_videos?id=' + program_id}]
 	for child in topic_children:
 		subresponse = libMediathek.getUrl(opa_url + '/programs?programId=' + child['programId'] + '&language=' + language + '&fields=title,subtitle,fullDescription,shortDescription,mainImage.url', headers=opa_token)
 		child_json = json.loads(subresponse)
 		program = child_json['programs'][0]
 		d = {}
-		if program['subtitle'] != None and program['title'] != None:
+		if program['subtitle'] is not None and program['title'] is not None:
 			d['_name'] = program['title'] + ' | ' + program['subtitle']
-		elif program['subtitle'] != None:
+		elif program['subtitle'] is not None:
 			d['_name'] = program['subtitle']
 		else:
 			d['_name'] = program['title']
@@ -92,13 +89,21 @@ def getCollection(url):
 
 
 def getListings(url, audio_desc=''):
-	l = []
 	response = libMediathek.getUrl(url, headers=emac_token)
 	j = json.loads(response)
-	return _parse_data(j['data'], j['nextPage'], audio_desc=audio_desc)
+	l = _parse_data(j['data'], audio_desc=audio_desc)
+	if j['nextPage']:
+		d = {}
+		d['url'] = j['nextPage']
+		d['_type'] = 'nextPage'
+		d['mode'] = 'libArteListListings'
+		if bool(audio_desc):
+			d['audioDesc'] = 'True'
+		l.append(d)
+	return l
 
 
-def _parse_data(data, nextpage, audio_desc=''):
+def _parse_data(data, audio_desc=''):
 	l = []
 	for video in filter(lambda item: item['programId'] is not None, data):
 		d = {}
@@ -132,14 +137,6 @@ def _parse_data(data, nextpage, audio_desc=''):
 			d['_type'] = 'date'
 			d['_duration'] = video['duration']
 		d['audioDesc'] = audio_desc
-		l.append(d)
-	if nextpage:
-		d = {}
-		d['url'] = nextpage
-		d['_type'] = 'nextPage'
-		d['mode'] = 'libArteListListings'
-		if bool(audio_desc):
-			d['audioDesc'] = 'True'
 		l.append(d)
 	return l
 
