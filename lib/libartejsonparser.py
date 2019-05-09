@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
+import time
+from datetime import datetime, timedelta
 import libmediathek3 as libMediathek
 
 langs = ['de', 'fr']
@@ -120,7 +122,10 @@ def _parse_data(data, audio_desc=''):
 		elif video['shortDescription']:
 			d['_plot'] = video['shortDescription']
 		if 'broadcastDates' in video:
-			d['_airedtime'] = video['broadcastDates'][0][11:-4]
+			airedtime = datetime(*(time.strptime(video['broadcastDates'][0], "%Y-%m-%dT%H:%M:%SZ")[0:6]))
+			utc_offset = timedelta(seconds=_utc_offset())
+			local_airedtime = airedtime + utc_offset
+			d['_airedtime'] = local_airedtime.strftime('%H:%M')
 		if video['images']['landscape']:
 			max_res = max(video['images']['landscape']['resolutions'], key=lambda item: item['w'])
 			d['_thumb'] = max_res['url']
@@ -139,6 +144,11 @@ def _parse_data(data, audio_desc=''):
 		d['audioDesc'] = audio_desc
 		l.append(d)
 	return l
+
+
+def _utc_offset():
+	is_dst = time.daylight and time.localtime().tm_isdst > 0  # check for daylight time
+	return - (time.altzone if is_dst else time.timezone)
 
 
 def getVideos(url):
