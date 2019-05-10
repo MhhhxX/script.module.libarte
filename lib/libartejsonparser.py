@@ -69,51 +69,28 @@ def getSubcategories(sublist):
 
 
 def getCollection(url):
-	response = libMediathek.getUrl(url, opa_token)
+	response = libMediathek.getUrl(url, emac_token)
 	j = json.loads(response)
-	program_id = j['programs'][0]['programId']
-	topic_children = filter(lambda item: item['kind'] in ['TOPIC', 'TV_SERIES'], j['programs'][0]['children'])
-	if not topic_children:
-		return getListings(emac_url + '/zones/collection_videos?id=' + program_id)
-	l = [
-			{
-				'_name': 'Übersicht',
-				'_type': 'dir', 'mode': 'libArteListListings',
-				'url': emac_url + '/zones/collection_videos?id=' + program_id
-			}
-	]
-	for child in topic_children:
-		subresponse = libMediathek.getUrl(opa_url + '/programs?programId=' + child['programId'] + '&language=' + language + '&fields=title,subtitle,fullDescription,shortDescription,mainImage.url,publishEnd', headers=opa_token)
-		child_json = json.loads(subresponse)
-		program = child_json['programs'][0]
+	l = []
+	collection_filter = filter(lambda item: item['data'] and item['code']['name'] != 'collection_content', j['zones'])
+	if len(collection_filter) == 1:
+		return _parse_data(collection_filter[0]['data'])
+	for zone in collection_filter:
 		d = {}
-		if program['publishEnd'] is not None:
-			publish_end = datetime(*(time.strptime(program['publishEnd'], "%Y-%m-%dT%H:%M:%SZ")[0:6]))
-			# filter folders where publication ended (they're empty in any case
-			# and it saves requests)
-			if datetime.utcnow() > publish_end:
-				continue
-		if program['subtitle'] is not None and program['title'] is not None:
-			d['_name'] = program['title'] + ' | ' + program['subtitle']
-		elif program['subtitle'] is not None:
-			d['_name'] = program['subtitle']
-		else:
-			d['_name'] = program['title']
-		if program['fullDescription']:
-			d['_plot'] = program['fullDescription']
-		elif program['shortDescription']:
-			d['_plot'] = program['shortDescription']
-		d['_thumb'] = program['mainImage']['url']
+		d['_name'] = zone['title']
 		d['_type'] = 'dir'
 		d['mode'] = 'libArteListListings'
-		d['url'] = emac_url + '/zones/collection_subcollection?id=' + program_id + '_' + child['programId']
+		d['url'] = json.dumps(zone)
 		l.append(d)
 	return l
 
 
-def getListings(url, audio_desc=''):
-	response = libMediathek.getUrl(url, headers=emac_token)
-	j = json.loads(response)
+def getListings(url_or_data, audio_desc=''):
+	try:
+		j = json.loads(url_or_data)
+	except ValueError:
+		response = libMediathek.getUrl(url_or_data, headers=emac_token)
+		j = json.loads(response)
 	l = _parse_data(j['data'], audio_desc=audio_desc)
 	if j['nextPage']:
 		d = {}
@@ -128,7 +105,11 @@ def getListings(url, audio_desc=''):
 
 def _parse_data(data, audio_desc=''):
 	l = []
-	for video in filter(lambda item: item['programId'] is not None, data):
+	for video in filter(lambda item: item['programId'] is not None if 'programId' in item else item['code']['id'] is not None, data):
+		if 'programId' in video:
+			program_id = video['programId']
+		else:
+			program_id = video['code']['id']
 		d = {}
 		if video['subtitle'] is not None and video['title'] is not None:
 			d['_name'] = video['title'] + ' | ' + video['subtitle']
@@ -155,7 +136,7 @@ def _parse_data(data, audio_desc=''):
 			d['_thumb'] = max_res['url']
 		if video['kind']['isCollection']:
 			d['mode'] = 'libArteListCollections'
-			d['url'] = opa_url + '/programs?programId=' + video['programId'] + '&language=' + language + '&fields=children,programId'
+			d['url'] = emac_url + '/' + program_id
 			d['_type'] = 'dir'
 		else:
 			d['url'] = opa_url + '/videoStreams?programId=' + video['programId'] + stream_params + '&kind=' + video['kind']['code']
