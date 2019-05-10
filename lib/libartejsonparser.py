@@ -8,6 +8,7 @@ langs = ['de', 'fr']
 
 setting = libMediathek.getSetting
 language = langs[int(setting("lang"))]
+translation = libMediathek.getTranslation
 
 opa_token = {"Authorization": "Bearer Nzc1Yjc1ZjJkYjk1NWFhN2I2MWEwMmRlMzAzNjI5NmU3NWU3ODg4ODJjOWMxNTMxYzEzZGRjYjg2ZGE4MmIwOA"}
 emac_token = {"Authorization": "Bearer MWZmZjk5NjE1ODgxM2E0MTI2NzY4MzQ5MTZkOWVkYTA1M2U4YjM3NDM2MjEwMDllODRhMjIzZjQwNjBiNGYxYw"}
@@ -21,7 +22,15 @@ def getDate(yyyymmdd):
 	# this would be the better endpoint, but it's not working: /zones/listing_TV_GUIDE?day=
 	response = libMediathek.getUrl(emac_url + '/TV_GUIDE?day=' + yyyymmdd, emac_token)
 	j = json.loads(response)
-	return _parse_data(j['zones'][1]['data'], audio_desc='')
+	highlights = [
+		{
+			'_name': translation(31046),
+			'mode': 'libArteListListings',
+			'_type': 'dir',
+			'url': emac_url + '/zones/highlights_TV_GUIDE?day=' + yyyymmdd
+		}
+	]
+	return highlights + _parse_data(j['zones'][1]['data'], audio_desc='')
 
 
 def getSearch(s):
@@ -63,15 +72,27 @@ def getCollection(url):
 	response = libMediathek.getUrl(url, opa_token)
 	j = json.loads(response)
 	program_id = j['programs'][0]['programId']
-	topic_children = filter(lambda item: item['kind'] == 'TOPIC', j['programs'][0]['children'])
+	topic_children = filter(lambda item: item['kind'] in ['TOPIC', 'TV_SERIES'], j['programs'][0]['children'])
 	if not topic_children:
 		return getListings(emac_url + '/zones/collection_videos?id=' + program_id)
-	l = [{'_name': 'Übersicht', '_type': 'dir', 'mode': 'libArteListListings', 'url': emac_url + '/zones/collection_videos?id=' + program_id}]
+	l = [
+			{
+				'_name': 'Übersicht',
+				'_type': 'dir', 'mode': 'libArteListListings',
+				'url': emac_url + '/zones/collection_videos?id=' + program_id
+			}
+	]
 	for child in topic_children:
-		subresponse = libMediathek.getUrl(opa_url + '/programs?programId=' + child['programId'] + '&language=' + language + '&fields=title,subtitle,fullDescription,shortDescription,mainImage.url', headers=opa_token)
+		subresponse = libMediathek.getUrl(opa_url + '/programs?programId=' + child['programId'] + '&language=' + language + '&fields=title,subtitle,fullDescription,shortDescription,mainImage.url,publishEnd', headers=opa_token)
 		child_json = json.loads(subresponse)
 		program = child_json['programs'][0]
 		d = {}
+		if program['publishEnd'] is not None:
+			publish_end = datetime(*(time.strptime(program['publishEnd'], "%Y-%m-%dT%H:%M:%SZ")[0:6]))
+			# filter folders where publication ended (they're empty in any case
+			# and it saves requests)
+			if datetime.utcnow() > publish_end:
+				continue
 		if program['subtitle'] is not None and program['title'] is not None:
 			d['_name'] = program['title'] + ' | ' + program['subtitle']
 		elif program['subtitle'] is not None:

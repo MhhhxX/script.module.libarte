@@ -52,9 +52,7 @@ def libArteListVideosNew():
 
 
 def libArteListDate():
-	date_dirs = libMediathek.populateDirDate('libArteListDateVideos', dateChooser=True)
-	date_dirs.append({'_name': translation(31046), 'mode': 'libArteListListings', '_type': 'dir', 'url': emac_url + '/zones/highlights_TV_GUIDE?limit=20'})
-	return date_dirs
+	return libMediathek.populateDirDate('libArteListDateVideos', dateChooser=True)
 
 
 def libArteListDateVideos():
