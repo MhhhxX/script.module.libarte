@@ -3,6 +3,7 @@ import json
 import time
 from datetime import datetime, timedelta
 import libmediathek3 as libMediathek
+import xbmc
 
 langs = ['de', 'fr']
 
@@ -139,8 +140,10 @@ def _parse_data(data, audio_desc=''):
 			d['url'] = emac_url + '/' + program_id
 			d['_type'] = 'dir'
 		else:
-			d['url'] = opa_url + '/videoStreams?programId=' + video['programId'] + stream_params + '&kind=' + video['kind']['code']
-			d['mode'] = 'libArtePlay'
+			# d['url'] = opa_url + '/videoStreams?programId=' + video['programId'] + stream_params + '&kind=' + video['kind']['code']
+			# d['mode'] = 'libArtePlay'
+			d['url'] = 'https://api.arte.tv/api/player/v1/config/de/' + program_id + '?autostart=0&lifeCycle=1&lang=' + language + '_' + language.upper() + '&config=arte_tvguide'
+			d['mode'] = 'libArtePlayV1'
 			d['_type'] = 'date'
 			d['_duration'] = video['duration']
 		d['audioDesc'] = audio_desc
@@ -230,6 +233,44 @@ def getVideoStream(url, audio_desc=''):
 		d['media'].append(fallback_sub)
 	else:
 		d['media'].append(fallback)
+	return d
+
+
+def getVideoUrlWeb(url, audio_desc=''):
+	d = {'media': [], 'metadata': {}}
+	result = {'type': 'video', 'stream': 'HLS'}
+	fallback_sub = {'type': 'video', 'stream': 'HLS'}
+	fallback = {'type': 'video', 'stream': 'HLS'}
+	response = libMediathek.getUrl(url)
+	j = json.loads(response)
+	streams = j['videoJsonPlayer']['VSR']
+	for stream in streams:  # oh, this is such bullshit. there are endless and senseless permutations of language/subtitle permutations. i'll have to rewrite this in the future for french and other languages, subtitles, hearing disabled, ... who the hell uses baked in subtitles in 2017?!?!
+		if streams[stream]['mediaType'] == 'hls':
+			audio_code = streams[stream]['versionCode']
+			url = streams[stream]['url']
+			if bool(audio_desc) and audio_code == lang_codes[language + 'Desc']:
+				result['url'] = url
+			if audio_code in lang_codes[language] and 'url' not in result:
+				result['url'] = url
+			if audio_code in lang_codes[language + 'Sub']:
+				fallback_sub['url'] = url
+			if 'url' not in fallback_sub and 'STA' in audio_code:
+				fallback_sub['url'] = url
+			if 'VO' in audio_code:
+				fallback['url'] = url
+	if 'url' in result:
+		d['media'].append(result)
+	elif not 'url' in result and 'url' in fallback_sub:
+		d['media'].append(fallback_sub)
+	else:
+		d['media'].append(fallback)
+	d['metadata']['name'] = j['videoJsonPlayer']['VTI']
+	if 'VDE' in j['videoJsonPlayer']:
+		d['metadata']['plot'] = j['videoJsonPlayer']['VDE']
+	elif 'V7T' in j['videoJsonPlayer']:
+		d['metadata']['plot'] = j['videoJsonPlayer']['V7T']
+	d['metadata']['thumb'] = j['videoJsonPlayer']['VTU']['IUR']
+	d['metadata']['duration'] = str(j['videoJsonPlayer']['videoDurationSeconds'])
 	return d
 
 
