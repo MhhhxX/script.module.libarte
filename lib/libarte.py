@@ -71,6 +71,9 @@ def libArtePlay():
 		params['audioDesc'] = ''
 	return libArteJsonParser.getVideoStream(params['url'], audio_desc=params['audioDesc'])
 
+def libArtePlayV1():
+	return libArteJsonParser.getVideoUrlWeb(params['url'])
+
 
 def headUrl(url):#TODO: move to libmediathek3
 	libMediathek.log(url)
@@ -98,6 +101,7 @@ def list():
 	'libArteListDateVideos': libArteListDateVideos,
 	'libArteSearch': libArteSearch,
 	'libArtePlay': libArtePlay,
+	'libArtePlayV1': libArtePlayV1,
 	}
 	
 	global params
@@ -107,8 +111,8 @@ def list():
 	mode = params.get('mode','libArteListMain')
 	if mode == 'libArtePlay':
 		libMediathek.play(libArtePlay())
-	elif mode == 'libArtePlay':
-		libMediathek.play(libArtePlay())
+	elif mode == 'libArtePlayV1':
+		libMediathek.play(libArtePlayV1())
 	else:
 		l = modes.get(mode)()
 		libMediathek.addEntries(l)
