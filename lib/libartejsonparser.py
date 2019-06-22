@@ -194,10 +194,10 @@ def getVideos(url):
 	return l
 
 lang_codes = {
-	'de': ['VA', 'VOA'],
+	'de': ['VA', 'VOA', 'liveDE'],
 	'deSub': ['VOA-STA', 'VA-STA'],
 	'deDesc': 'VAAUD',
-	'fr': ['VF', 'VOF'],
+	'fr': ['VF', 'VOF', 'liveFR'],
 	'frSub': ['VF-STF', 'VOF-STF'],
 	'frDesc': 'VFAUD'
 }
